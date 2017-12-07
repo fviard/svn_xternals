@@ -19,6 +19,8 @@ DEFAULT_MAX_JOBS = 4
 DEFAULT_EXTERNALS_FILE = 'externals.conf'
 URL_PADDING = 100
 
+global_stop = False
+
 class Component(object):
     def __init__(self, path, uri, rev=None):
         self.path = path
@@ -49,7 +51,7 @@ def parse_gclient_compo_line(line):
     uri = uri.strip()
     uri = uri.rstrip(',')
     uri = uri.strip("'")
-    compo = Component(uri, folder)
+    compo = Component(folder, uri)
     return compo
 
 
@@ -85,7 +87,7 @@ def parse_externals_compo_line(line):
         return None
     folder, uri = line.split(None, 1)
 
-    compo = Component(uri, folder)
+    compo = Component(folder, uri)
     return compo
 
 def load_externals_from_file(workdir, ext_file):
@@ -158,15 +160,19 @@ def scm_checkout_update_switch_worker(component):
             logging.debug("Start update of %s"% path)
             if not run_command(['svn', 'update', path]):
                 logging.debug("Error during update of %s"%path)
-                return path, "UpdateError"
-            return path, "Update"
+                component.result = "UpdateError"
+                return component
+            component.result = "Update"
+            return component
 
     elif not os.path.exists(path):
         # checkout
-        return path, "Checkout"
+        component.result = "Checkout"
+        return component
     else:
         logging.debug("Path: %s exists and is not a dir "%path)
-        return path, "Error"
+        component.result = "Error"
+        return component
 
 
 def externals_update_main(workdir, ext_file, maxjobs=4, recursive=False):
@@ -190,6 +196,8 @@ def externals_update_main(workdir, ext_file, maxjobs=4, recursive=False):
 
     # Step 3: Process and display the results
     for entry in result:
+        if not entry:
+            continue
         if entry.path and entry.path.startswith(workdir):
             component_path = entry.path[len(workdir):]
         else:
