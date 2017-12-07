@@ -36,6 +36,47 @@ def run_command(command_list):
         return True
 
 
+def parse_gclient_compo_line(line):
+    line = line.strip()
+    if not line:
+        return None
+    if line.startswith("#"):
+        return None
+    folder, url = line.split(':', 1)
+    folder = folder.strip()
+    folder = folder.strip("'")
+
+    url = url.strip()
+    url = url.rstrip(',')
+    url = url.strip("'")
+    compo = Component(uri, folder)
+    return compo
+
+
+def load_externals_from_gclient_file(workdir, ext_file):
+    components_list = []
+    with open(ext_file, "r") as ext_fp:
+        in_dep = False
+        for line in ext_fp.readlines():
+            if not in_dep:
+                if line.startswith('deps = {'):
+                    in_dep = True
+                    continue
+                else:
+                    continue
+
+            if line.startswith('}'):
+                in_dep = False
+                continue
+
+            compo = parse_gclient_compo_line(line)
+            if not compo or not compo.path or not compo.url:
+                continue
+
+            components_list.append(compo)
+    return components_list
+
+
 def parse_externals_compo_line(line):
     line = line.strip()
     if not line:
@@ -49,7 +90,7 @@ def parse_externals_compo_line(line):
 
 def load_externals_from_file(workdir, ext_file):
     components_list = []
-    with open("ext_file", "r") as ext_fp:
+    with open(ext_file, "r") as ext_fp:
         for line in ext_fp.readlines():
             compo = parse_externals_compo_line(line)
             if not compo or not compo.path or not compo.uri:
@@ -58,6 +99,7 @@ def load_externals_from_file(workdir, ext_file):
             components_list.append(compo)
 
     return components_list
+
 
 def load_externals_from_svn(workdir):
     components_list = []
