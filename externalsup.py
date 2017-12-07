@@ -42,13 +42,13 @@ def parse_gclient_compo_line(line):
         return None
     if line.startswith("#"):
         return None
-    folder, url = line.split(':', 1)
+    folder, uri = line.split(':', 1)
     folder = folder.strip()
     folder = folder.strip("'")
 
-    url = url.strip()
-    url = url.rstrip(',')
-    url = url.strip("'")
+    uri = uri.strip()
+    uri = uri.rstrip(',')
+    uri = uri.strip("'")
     compo = Component(uri, folder)
     return compo
 
@@ -70,7 +70,7 @@ def load_externals_from_gclient_file(workdir, ext_file):
                 continue
 
             compo = parse_gclient_compo_line(line)
-            if not compo or not compo.path or not compo.url:
+            if not compo or not compo.path or not compo.uri:
                 continue
 
             components_list.append(compo)
