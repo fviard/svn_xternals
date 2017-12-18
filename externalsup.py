@@ -189,11 +189,18 @@ class ClientGIT(object):
         return
 
     def git_cwd_cmd(self, path, command):
-        cmd = ['git', '-C', path]
+        cmd = ['git']
+        ## Hack to cwd because -C is only supported with git >= 1.8
+        # if git_version >= 1.8:
+        # cmd += ['-C', path]
+        # else:
+        #cmd += ['--git-dir=%s'% os.path.join(path, '.git'),
+        #        '--work-tree=%s/'% path]
+
         cmd += command
         if not self.verbose:
             cmd += ['-q']
-        if not run_command(cmd):
+        if not run_command(cmd, path):
             return False
 
         return True
@@ -213,14 +220,14 @@ class ClientGIT(object):
 
     def update(self, path, rev=None):
         # If the repo and branch are the same, we can just pull
-        if not self.git_cwd_cmd(path, ['pull', '--ff-only']):
+        if not self.git_cwd_cmd(path, ['pull', '--ff-only', 'origin', rev]):
             return False
 
         return True
 
     def switch(self, path, uri, rev=None):
         verbose = False
-        cmd = ['fetch']
+        cmd = ['fetch', 'origin']
         if self.verbose:
             cmd += ['--verbose']
         if not self.git_cwd_cmd(path, cmd):
@@ -235,7 +242,11 @@ class ClientGIT(object):
         if not self.git_cwd_cmd(path, ['checkout', rev]):
             return False
 
-        if not self.git_cwd_cmd(path, ['pull', '--ff-only']):
+        # Git is not great. Pull can't be used directly with
+        # git <1.8 as it has a bug when using "pull" and the
+        # the "--work-tree" option...
+        # if not self.git_cwd_cmd(path, ['pull', '--ff-only']):
+        if not self.git_cwd_cmd(path, ['pull', '--ff-only', 'origin', rev]):
             return False
         return True
 
@@ -254,11 +265,15 @@ class ClientGIT(object):
         return True
 
 
-def run_command(command_list):
-    if call(command_list) != 0:
-        return False
+def run_command(command_list, cwd=None):
+    if cwd:
+        if call(command_list, cwd=cwd) != 0:
+            return False
     else:
-        return True
+        if call(command_list) != 0:
+            return False
+
+    return True
 
 
 def detect_scm_type_from_uri(uri):
