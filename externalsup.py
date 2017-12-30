@@ -77,7 +77,7 @@ class ClientSVN(object):
             rev = 0
         url = entry.url
 
-        return(url, str(rev))
+        return url, str(rev)
 
     def set_op_monitor(self, verbose=0, conflict_list=None):
         if conflict_list is None and not verbose:
@@ -180,7 +180,7 @@ class ClientGIT(object):
         #* (détaché de v7.1.1)
 
         """
-        return (None, '')
+        return None, ''
 
     def set_op_monitor(self, verbose=0, conflict_list=None):
         return
@@ -386,68 +386,48 @@ def scm_checkout_update_switch_worker(component):
     req_uri, req_rev = scm_client.clean_uri(uri, None)
 
     try:
-        if scm_type == ComponentType.SVN:
-            if os.path.isdir(path):
-                # switch or update
-                path_info = scm_client.info(path)
-                path_uri, path_rev = scm_client.clean_uri(path_info[0], path_info[1])
+        if os.path.isdir(path):
+            # switch or update
+            path_info = scm_client.info(path)
+            path_uri, path_rev = scm_client.clean_uri(path_info[0], path_info[1])
 
-                if is_same_compo(req_uri, path_uri):
-                    # update
-                    if req_rev:
-                        logging.debug("Update of %s to rev %s", path, req_rev)
-                    else:
-                        logging.debug("Update of %s", path)
-                    if scm_client.update(path, req_rev):
-                        component.result = "Update"
-                    else:
-                        logging.debug("Error during update of %s", path)
-                        component.result = "UpdateError"
-                else:
-                    # Switch
-                    logging.debug("Switch of %s:\n\t%s -> %s", path, path_uri, req_uri)
-                    if scm_client.switch(path, req_uri, req_rev):
-                        component.result = "Switch"
-                    else:
-                        logging.debug("Error during switch of %s", path)
-                        component.result = "SwitchError"
-
-            elif not os.path.exists(path):
-                # checkout
+            if is_same_compo(req_uri, path_uri):
+                # update
                 if req_rev:
-                    logging.debug("Checkout of %s rev/branch %s [%s]", req_uri, req_rev, path)
+                    logging.debug("Update of %s to rev %s", path, req_rev)
                 else:
-                    logging.debug("Checkout of %s [%s]", req_uri, path)
-                if scm_client.checkout(path, req_uri, req_rev):
-                    component.result = "Checkout"
+                    logging.debug("Update of %s", path)
+                if scm_client.update(path, req_rev):
+                    component.result = "Update"
                 else:
                     logging.debug("Error during update of %s", path)
-                    component.result = "CheckoutError"
+                    component.result = "UpdateError"
             else:
-                logging.debug("Path: %s exists and is not a dir ", path)
-                component.result = "Error"
-        elif scm_type == ComponentType.GIT:
-            if os.path.isdir(path):
                 # Switch
-                logging.debug("Switch of %s: -> %s", path, req_uri)
+                if path_uri:
+                    logging.debug("Switch of %s:\n\t%s -> %s", path, path_uri, req_uri)
+                else:
+                    logging.debug("Switch of %s: -> %s", path, req_uri)
                 if scm_client.switch(path, req_uri, req_rev):
                     component.result = "Switch"
                 else:
                     logging.debug("Error during switch of %s", path)
                     component.result = "SwitchError"
-            elif not os.path.exists(path):
-                if req_rev:
-                    logging.debug("Checkout of %s rev/branch %s [%s]", req_uri, req_rev, path)
-                else:
-                    logging.debug("Checkout of %s [%s]", req_uri, path)
-                if scm_client.checkout(path, req_uri, req_rev):
-                    component.result = "Checkout"
-                else:
-                    logging.debug("Error during update of %s", path)
-                    component.result = "CheckoutError"
+
+        elif not os.path.exists(path):
+            # checkout
+            if req_rev:
+                logging.debug("Checkout of %s rev/branch %s [%s]", req_uri, req_rev, path)
             else:
-                logging.debug("Path: %s exists and is not a dir ", path)
-                component.result = "Error"
+                logging.debug("Checkout of %s [%s]", req_uri, path)
+            if scm_client.checkout(path, req_uri, req_rev):
+                component.result = "Checkout"
+            else:
+                logging.debug("Error during update of %s", path)
+                component.result = "CheckoutError"
+        else:
+            logging.debug("Path: %s exists and is not a dir ", path)
+            component.result = "Error"
 
     except:
         logging.exception("Worker unexpected error.")
