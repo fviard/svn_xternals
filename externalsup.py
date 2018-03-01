@@ -255,6 +255,8 @@ class ClientGIT(object):
         cmd += ['--progress']
         if self.verbose:
             cmd += ['--verbose']
+        else:
+            cmd += ['--quiet']
         if rev:
             # Clone directly the right branch if any
             cmd += ['-b', rev]
@@ -360,7 +362,7 @@ def load_externals_from_svn(workdir):
     return components_list
 
 def is_same_compo(uri, other_uri):
-    #logging.debug("is same: %r : %r | %r : %r", uri, rev, other_uri, other_rev)
+    #logging.debug("is same: %r : %r", uri, other_uri)
     if uri != other_uri:
         return False
 
@@ -406,8 +408,10 @@ def scm_checkout_update_switch_worker(component):
                 # Switch
                 if path_uri:
                     logging.debug("Switch of %s:\n\t%s -> %s", path, path_uri, req_uri)
+                elif req_rev:
+                    logging.debug("Switch of %s: current -> %s [@%s]", path, req_uri, req_rev)
                 else:
-                    logging.debug("Switch of %s: -> %s", path, req_uri)
+                    logging.debug("Switch of %s: current -> %s", path, req_uri)
                 if scm_client.switch(path, req_uri, req_rev):
                     component.result = "Switch"
                 else:
@@ -417,9 +421,9 @@ def scm_checkout_update_switch_worker(component):
         elif not os.path.exists(path):
             # checkout
             if req_rev:
-                logging.debug("Checkout of %s rev/branch %s [%s]", req_uri, req_rev, path)
+                logging.debug("Checkout of %s: WITH %s [@%s]", path, req_uri, req_rev)
             else:
-                logging.debug("Checkout of %s [%s]", req_uri, path)
+                logging.debug("Checkout of %s: WITH %s", path, req_uri)
             if scm_client.checkout(path, req_uri, req_rev):
                 component.result = "Checkout"
             else:
